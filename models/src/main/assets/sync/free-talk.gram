@@ -1,5 +1,6 @@
 #JSGF V1.0;
 
 grammar digits;
-public <smart> = (welcome | good morning | hello | hi | can i talk to you free as i want |
-can you hear me | do you know about easyto | go down the street | call nine one one );
+public <talk> = (welcome to california | good morning | hello | hi bro | can i talk to you free
+as i want | can you hear me | do you know about easyto | go down the street please | call nine one one | can you introduce yourself | are you a traveller | please give me your passport | what is the weather like in beijing the day after tomorrow | can i help | can i help you | can you help me | are you from china | of course we will | thank you | thanks | thanks very
+much | thank you very much);

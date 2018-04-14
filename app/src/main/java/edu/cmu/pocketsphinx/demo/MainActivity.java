@@ -38,6 +38,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.text.TextUtils;
 import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -45,7 +46,7 @@ import android.widget.Toast;
 import java.io.File;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.util.HashMap;
+import java.util.Locale;
 
 import edu.cmu.pocketsphinx.Assets;
 import edu.cmu.pocketsphinx.Hypothesis;
@@ -53,29 +54,17 @@ import edu.cmu.pocketsphinx.RecognitionListener;
 import edu.cmu.pocketsphinx.SpeechRecognizer;
 import edu.cmu.pocketsphinx.SpeechRecognizerSetup;
 
-import static android.widget.Toast.makeText;
-
 /**
  * @author Unknown yet.
  */
-public class PocketSphinxActivity extends Activity implements RecognitionListener {
+public class MainActivity extends Activity implements RecognitionListener {
 
-    private static final String TAG = "^_^" + PocketSphinxActivity.class.getSimpleName();
+    private static final String TAG = "^_^" + MainActivity.class.getSimpleName();
 
     /**
      * Named searches allow to quickly reconfigure the decoder
      */
-    private static final String KWS_SEARCH = "wakeup";
-    private static final String FORECAST_SEARCH = "forecast";
-    private static final String DIGITS_SEARCH = "digits";
-    private static final String PHONE_SEARCH = "phones";
-    private static final String MENU_SEARCH = "menu";
-    private static final String FREE_TALK_SEARCH = "free_talk";
-
-    /**
-     * Keyword we are looking for to activate menu
-     */
-    private static final String KEYPHRASE = "oh mighty computer";
+    private static final String FREE_TALK = "freeTalk";
 
     /**
      * Used to handle permission request
@@ -83,8 +72,7 @@ public class PocketSphinxActivity extends Activity implements RecognitionListene
     private static final int PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
 
     private SpeechRecognizer recognizer;
-    private HashMap<String, Integer> captions;
-    private TextView tvCaption;
+    private TextView tvRecognition;
     private TextView tvResult;
 
     @Override
@@ -92,17 +80,8 @@ public class PocketSphinxActivity extends Activity implements RecognitionListene
         Log.d(TAG, "onCreate()");
         super.onCreate(state);
 
-        // Prepare the data for UI
-        captions = new HashMap<>(5);
-        captions.put(KWS_SEARCH, R.string.kws_caption);
-        captions.put(MENU_SEARCH, R.string.menu_caption);
-        captions.put(FREE_TALK_SEARCH, R.string.free_talk_caption);
-        captions.put(DIGITS_SEARCH, R.string.digits_caption);
-        captions.put(PHONE_SEARCH, R.string.phone_caption);
-        captions.put(FORECAST_SEARCH, R.string.forecast_caption);
         setContentView(R.layout.main);
         initView();
-        tvCaption.setText("Preparing the recognizer");
 
         // Check if user has given permission to record audio
         int permissionCheck = ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.RECORD_AUDIO);
@@ -116,14 +95,14 @@ public class PocketSphinxActivity extends Activity implements RecognitionListene
     }
 
     private void initView() {
-        tvCaption = findViewById(R.id.caption_text);
-        tvResult = findViewById(R.id.result_text);
+        tvRecognition = findViewById(R.id.tvRecognition);
+        tvResult = findViewById(R.id.tvResult);
     }
 
     private static class SetupTask extends AsyncTask<Void, Void, Exception> {
-        WeakReference<PocketSphinxActivity> activityReference;
+        WeakReference<MainActivity> activityReference;
 
-        SetupTask(PocketSphinxActivity activity) {
+        SetupTask(MainActivity activity) {
             this.activityReference = new WeakReference<>(activity);
         }
 
@@ -141,17 +120,16 @@ public class PocketSphinxActivity extends Activity implements RecognitionListene
 
         @Override
         protected void onPostExecute(Exception result) {
-            if (result != null) {
-                ((TextView) activityReference.get().findViewById(R.id.caption_text)).setText("Failed to init recognizer " + result);
-            } else {
-                activityReference.get().switchSearch(KWS_SEARCH);
+            if (result == null) {
+                activityReference.get().restartListening();
             }
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions, @NonNull int[] grantResults) {
+                                           @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
         if (requestCode == PERMISSIONS_REQUEST_RECORD_AUDIO) {
@@ -188,23 +166,7 @@ public class PocketSphinxActivity extends Activity implements RecognitionListene
 
         String text = hypothesis.getHypstr();
         Log.d(TAG, "onPartialResult() hypothesis: " + text);
-        switch (text) {
-            case KEYPHRASE:
-                switchSearch(MENU_SEARCH);
-                break;
-            case DIGITS_SEARCH:
-                switchSearch(DIGITS_SEARCH);
-                break;
-            case PHONE_SEARCH:
-                switchSearch(PHONE_SEARCH);
-                break;
-            case FORECAST_SEARCH:
-                switchSearch(FORECAST_SEARCH);
-                break;
-            default:
-                tvResult.setText(text);
-                break;
-        }
+        tvRecognition.setText(text);
     }
 
     /**
@@ -212,11 +174,22 @@ public class PocketSphinxActivity extends Activity implements RecognitionListene
      */
     @Override
     public void onResult(Hypothesis hypothesis) {
-        tvResult.setText("");
-        if (hypothesis != null) {
-            String text = hypothesis.getHypstr();
-            Log.i(TAG, "onResult() hypothesis: " + text);
-            makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
+        Log.w(TAG, String.format(Locale.getDefault(), "hypothesis == null: %B", hypothesis == null));
+
+        tvRecognition.setText("");
+
+        if (hypothesis == null) {
+            Toast.makeText(this, "没听懂。", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String text = hypothesis.getHypstr();
+        Log.i(TAG, "onResult() hypothesis: " + text);
+
+        if (TextUtils.isEmpty(tvResult.getText())) {
+            tvResult.setText(text);
+        } else {
+            tvResult.setText(String.format(Locale.getDefault(), "%1$s\n%2$s", tvResult.getText(), text));
         }
     }
 
@@ -230,27 +203,13 @@ public class PocketSphinxActivity extends Activity implements RecognitionListene
     @Override
     public void onEndOfSpeech() {
         Log.d(TAG, "onEndOfSpeech() recognizer.getSearchName(): " + recognizer.getSearchName());
-        if (recognizer.getSearchName().equals(KWS_SEARCH)) {
-            return;
-        }
-
-        switchSearch(KWS_SEARCH);
+        restartListening();
     }
 
-    private void switchSearch(String searchName) {
+    private void restartListening() {
+        Log.w(TAG, "restartListening()");
         recognizer.stop();
-
-        Log.w(TAG, "switchSearch() searchName: " + searchName);
-
-        // If we are not spotting, start listening with timeout (10000 ms or 10 seconds).
-        if (searchName.equals(KWS_SEARCH)) {
-            recognizer.startListening(searchName);
-        } else {
-            recognizer.startListening(searchName, 10000);
-        }
-
-        String caption = getResources().getString(captions.get(searchName));
-        tvCaption.setText(caption);
+        recognizer.startListening(FREE_TALK, 10000);
     }
 
     private void setupRecognizer(File assetsDir) throws IOException {
@@ -269,36 +228,24 @@ public class PocketSphinxActivity extends Activity implements RecognitionListene
          */
 
         // Create keyword-activation search.
-        recognizer.addKeyphraseSearch(KWS_SEARCH, KEYPHRASE);
+//        recognizer.addKeyphraseSearch(KWS_SEARCH, KEYPHRASE);
 
         // Create grammar-based search for selection between demos
-        File menuGrammar = new File(assetsDir, "free-talk.gram");
-        recognizer.addGrammarSearch(MENU_SEARCH, menuGrammar);
-
-        // Create grammar-based search for digit recognition
-        File digitsGrammar = new File(assetsDir, "digits.gram");
-        recognizer.addGrammarSearch(DIGITS_SEARCH, digitsGrammar);
-
-        // Create language model search
-        File languageModel = new File(assetsDir, "weather.dmp");
-        recognizer.addNgramSearch(FORECAST_SEARCH, languageModel);
-
-        // Phonetic search
-        File phoneticModel = new File(assetsDir, "en-phone.dmp");
-        recognizer.addAllphoneSearch(PHONE_SEARCH, phoneticModel);
-
-        // Free talk search
-        File freeTalkModel = new File(assetsDir, "free-talk.dmp");
-        recognizer.addAllphoneSearch(FREE_TALK_SEARCH, freeTalkModel);
+        File freeTalkGrammar = new File(assetsDir, "free-talk.gram");
+        try {
+            recognizer.addGrammarSearch(FREE_TALK, freeTalkGrammar);
+        } catch (Exception e) {
+            Log.e(TAG, e.getMessage(), e);
+        }
     }
 
     @Override
     public void onError(Exception error) {
-        ((TextView) findViewById(R.id.caption_text)).setText(error.getMessage());
+        Toast.makeText(this, error.getMessage(), Toast.LENGTH_LONG).show();
     }
 
     @Override
     public void onTimeout() {
-        switchSearch(KWS_SEARCH);
+        restartListening();
     }
 }
