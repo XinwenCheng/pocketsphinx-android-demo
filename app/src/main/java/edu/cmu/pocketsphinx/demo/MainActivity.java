@@ -121,6 +121,7 @@ public class MainActivity extends Activity implements RecognitionListener {
         @Override
         protected void onPostExecute(Exception result) {
             if (result == null) {
+                Log.i(TAG, "开始录音");
                 activityReference.get().restartListening();
             }
         }
