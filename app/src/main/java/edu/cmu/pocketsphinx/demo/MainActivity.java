@@ -64,7 +64,7 @@ public class MainActivity extends Activity implements RecognitionListener {
     /**
      * Named searches allow to quickly reconfigure the decoder
      */
-    private static final String FREE_TALK = "freeTalk";
+    private static final String CORPUS = "corpus";
 
     /**
      * Used to handle permission request
@@ -119,11 +119,14 @@ public class MainActivity extends Activity implements RecognitionListener {
         }
 
         @Override
-        protected void onPostExecute(Exception result) {
-            if (result == null) {
-                Log.i(TAG, "开始录音");
-                activityReference.get().restartListening();
+        protected void onPostExecute(Exception e) {
+            if (e != null) {
+                Log.e(TAG, e.getMessage(), e);
+                return;
             }
+
+            Log.i(TAG, "开始录音");
+            activityReference.get().restartListening();
         }
     }
 
@@ -210,10 +213,12 @@ public class MainActivity extends Activity implements RecognitionListener {
     private void restartListening() {
         Log.w(TAG, "restartListening()");
         recognizer.stop();
-        recognizer.startListening(FREE_TALK, 10000);
+        recognizer.startListening(CORPUS, 10000);
     }
 
     private void setupRecognizer(File assetsDir) throws IOException {
+        Log.i(TAG, "setupRecognizer()");
+
         // The recognizer can be configured to perform multiple searches
         // of different kind and switch between them
 
@@ -232,12 +237,8 @@ public class MainActivity extends Activity implements RecognitionListener {
 //        recognizer.addKeyphraseSearch(KWS_SEARCH, KEYPHRASE);
 
         // Create grammar-based search for selection between demos
-        File freeTalkGrammar = new File(assetsDir, "free-talk.gram");
-        try {
-            recognizer.addGrammarSearch(FREE_TALK, freeTalkGrammar);
-        } catch (Exception e) {
-            Log.e(TAG, e.getMessage(), e);
-        }
+//        recognizer.addGrammarSearch(CORPUS, new File(assetsDir, "free-talk.gram"));
+        recognizer.addNgramSearch(CORPUS, new File(assetsDir, "corpus.lm.dmp"));
     }
 
     @Override
