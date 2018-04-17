@@ -238,7 +238,7 @@ public class MainActivity extends Activity implements RecognitionListener {
 
         // Create grammar-based search for selection between demos
 //        recognizer.addGrammarSearch(CORPUS, new File(assetsDir, "free-talk.gram"));
-        recognizer.addNgramSearch(CORPUS, new File(assetsDir, "corpus.lm.dmp"));
+        recognizer.addNgramSearch(CORPUS, new File(assetsDir, "corpus.lm.bin"));
     }
 
     @Override
