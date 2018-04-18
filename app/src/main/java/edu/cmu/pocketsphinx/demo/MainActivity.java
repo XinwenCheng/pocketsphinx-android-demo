@@ -40,6 +40,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -74,6 +75,7 @@ public class MainActivity extends Activity implements RecognitionListener {
     private SpeechRecognizer recognizer;
     private TextView tvRecognition;
     private TextView tvResult;
+    private ScrollView svResult;
 
     @Override
     public void onCreate(Bundle state) {
@@ -97,6 +99,7 @@ public class MainActivity extends Activity implements RecognitionListener {
     private void initView() {
         tvRecognition = findViewById(R.id.tvRecognition);
         tvResult = findViewById(R.id.tvResult);
+        svResult = findViewById(R.id.svResult);
     }
 
     private static class SetupTask extends AsyncTask<Void, Void, Exception> {
@@ -190,11 +193,17 @@ public class MainActivity extends Activity implements RecognitionListener {
         String text = hypothesis.getHypstr();
         Log.i(TAG, "onResult() hypothesis: " + text);
 
+        if (TextUtils.isEmpty(text)) {
+            return;
+        }
+
         if (TextUtils.isEmpty(tvResult.getText())) {
             tvResult.setText(text);
         } else {
             tvResult.setText(String.format(Locale.getDefault(), "%1$s\n%2$s", tvResult.getText(), text));
         }
+
+        svResult.fullScroll(ScrollView.FOCUS_DOWN);
     }
 
     @Override
